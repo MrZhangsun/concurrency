@@ -2,9 +2,15 @@ package site.zhangsun.concurrent.zookeeper;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.zookeeper.*;
+import org.apache.zookeeper.data.ACL;
+import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.data.Stat;
+import org.apache.zookeeper.server.auth.DigestAuthenticationProvider;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -23,11 +29,32 @@ public class ZKClient {
      */
     private static final String host = "localhost:2181,localhost:2182,localhost:2183";
 
-    public static void main(String[] args) throws InterruptedException, IOException, KeeperException {
+    public static void main(String[] args) throws InterruptedException, IOException, KeeperException, NoSuchAlgorithmException {
         ZKClient zkClient = new ZKClient();
         zkClient.connect();
-        zkClient.deleteNode();
+       zkClient.setAcl();
         TimeUnit.SECONDS.sleep(5);
+    }
+
+    private void setAcl() throws NoSuchAlgorithmException, KeeperException, InterruptedException {
+        List<ACL> acls = new ArrayList<>();
+        Id c1 = new Id("digest", DigestAuthenticationProvider.generateDigest("murphy:123"));
+        Id c2 = new Id("digest", DigestAuthenticationProvider.generateDigest("moly:123"));
+        ACL acl1 = new ACL(ZooDefs.Perms.ADMIN, c1);
+        ACL acl2 = new ACL(ZooDefs.Perms.ADMIN, c2);
+        ACL acl3 = new ACL(ZooDefs.Perms.READ, c1);
+        ACL acl4 = new ACL(ZooDefs.Perms.READ, c2);
+        ACL acl5 = new ACL(ZooDefs.Perms.WRITE, c2);
+        ACL acl6 = new ACL(ZooDefs.Perms.DELETE, c1);
+        acls.add(acl1);
+        acls.add(acl2);
+        acls.add(acl3);
+        acls.add(acl4);
+        acls.add(acl5);
+        acls.add(acl6);
+
+        String s = zooKeeper.create("/aclNode", "aclData".getBytes(), acls, CreateMode.PERSISTENT);
+        System.out.println("ACL Node: " + s);
     }
 
     public void connect() throws IOException, InterruptedException {
@@ -102,10 +129,45 @@ public class ZKClient {
         zooKeeper.delete("/person", 0);
     }
 
+    private void exist() throws KeeperException, InterruptedException {
+        zooKeeper.register(new MyWatcher());
+        Stat stat = zooKeeper.exists("/zookeeper", true);
+        if (stat != null)
+            System.out.println(stat.getVersion());
+        else
+            System.out.println("Node doesn't exist");
+    }
+
+    private void setWatcher() {
+        zooKeeper.register(new MyWatcher());
+
+    }
+
     class MyWatcher implements Watcher {
 
         @Override
         public void process(WatchedEvent watchedEvent) {
+            Event.EventType type = watchedEvent.getType();
+            switch (type) {
+                case None:
+                    System.out.println("Event type :" + type );
+                    break;
+                case NodeDataChanged:
+                    System.out.println("Event type :" + type );
+                    break;
+                case NodeCreated:
+                    System.out.println("Event type :" + type );
+                    break;
+                case NodeDeleted:
+                    System.out.println("Event type :" + type );
+                    break;
+                case NodeChildrenChanged:
+                    System.out.println("Event type :" + type );
+                    break;
+                    default:
+                        System.out.println("Event type :" + type );
+
+            }
             log.info("Event type: {}, event: {}", watchedEvent.getType(), watchedEvent.getState());
         }
     }
