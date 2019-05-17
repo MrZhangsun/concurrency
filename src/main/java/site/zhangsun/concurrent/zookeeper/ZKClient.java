@@ -57,7 +57,7 @@ public class ZKClient {
         System.out.println("ACL Node: " + s);
     }
 
-    public void connect() throws IOException, InterruptedException {
+    public void connect() throws IOException {
         this.zooKeeper = new ZooKeeper(host, 2000, new MyWatcher());
         ZooKeeper.States state = this.zooKeeper.getState();
 
